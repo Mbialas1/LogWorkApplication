@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "aJ4e6GrWWJuI2O5Uon2uhkkgciCWZevmST3iNRmHjV56R8jNl2ZQHAA4PBpAnhlfaXK9a9k4G3RNqC86B9VHNw==",
+  "success": true,
+  "projectFilePath": "G:\\OFI\\repo\\LogWorkApp\\LogWorkService\\LogWorkService.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Mateusz\\.nuget\\packages\\microsoft.visualstudio.azure.containers.tools.targets\\1.17.0\\microsoft.visualstudio.azure.containers.tools.targets.1.17.0.nupkg.sha512"
+  ],
+  "logs": []
+}
