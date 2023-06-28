@@ -1,0 +1,13 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/LogWorkService/obj/Container/ContainerRunContext.cache
+/LogWorkService/obj/Container/ContainerName.cache
+/LogWorkService/obj/Container/ContainerId.cache
+/LogWorkService/obj/Container/ContainerDevelopmentMode.cache
+/.vs/ProjectEvaluation/logworkapp.projects.v5.2
+/.vs/ProjectEvaluation/logworkapp.metadata.v5.2
+/.vs/LogWorkApp/v17/.suo
+/.vs/LogWorkApp/DesignTimeBuild/.dtbcache.v2
+/.vs/LogWorkApp/v17/.wsuo
