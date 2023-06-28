@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogWorkService", "LogWorkService\LogWorkService.csproj", "{16F20544-DEDF-4FC5-B497-EB1D9734F0D9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogWorkService", "LogWorkService\LogWorkService.csproj", "{16F20544-DEDF-4FC5-B497-EB1D9734F0D9}"
+EndProject
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "LogWork", "LogWork\LogWork.esproj", "{4D679279-C140-4140-903F-994C3386F446}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,12 @@ Global
 		{16F20544-DEDF-4FC5-B497-EB1D9734F0D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16F20544-DEDF-4FC5-B497-EB1D9734F0D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16F20544-DEDF-4FC5-B497-EB1D9734F0D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D679279-C140-4140-903F-994C3386F446}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
