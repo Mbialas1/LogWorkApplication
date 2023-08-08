@@ -1,0 +1,2 @@
+G:\OFI\repo\LogWorkApp\LogWork\obj\Debug\LogWork.esproj.SuggestedBindingRedirects.cache
+G:\OFI\repo\LogWorkApp\LogWork\obj\Debug\LogWork.esproj.CoreCompileInputs.cache
