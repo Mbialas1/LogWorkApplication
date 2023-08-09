@@ -3,12 +3,14 @@ using LogWorkService.Helpers;
 using LogWorkService.Models;
 using LogWorkService.Models.DTO;
 using LogWorkService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Runtime.CompilerServices;
 
 namespace LogWorkService.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class TaskController : Controller
