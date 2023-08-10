@@ -55,6 +55,10 @@
               "target": "Package",
               "version": "[1.17.0, )"
             },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )"
+            },
             "Serilog": {
               "target": "Package",
               "version": "[3.0.1, )"
@@ -74,6 +78,10 @@
             "Serilog.Sinks.Console": {
               "target": "Package",
               "version": "[4.1.0, )"
+            },
+            "StackExchange.Redis": {
+              "target": "Package",
+              "version": "[2.6.122, )"
             }
           },
           "imports": [

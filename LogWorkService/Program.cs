@@ -2,6 +2,7 @@ using LogWorkService.Authorization;
 using LogWorkService.Services;
 using Microsoft.AspNetCore.Authentication;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 builder.Services.AddScoped<TaskService>();
 
 #endregion
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(builder.Configuration.GetSection("Redis:Configuration").Value));
 
 builder.Services.AddControllers();
 

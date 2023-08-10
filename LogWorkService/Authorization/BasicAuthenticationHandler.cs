@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using LogWorkService.Authorization.Cache;
 using LogWorkService.Controllers;
 using LogWorkService.Exceptions;
 using LogWorkService.Helpers;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
+using StackExchange.Redis;
 using System.ComponentModel;
 using System.Data;
 using System.Net.Http.Headers;
@@ -21,13 +23,23 @@ namespace LogWorkService.Authorization
         private readonly IConfiguration _configuration;
         private readonly IDbConnection _dbConnection;
         private readonly ILogger<TaskController> _logger;
+        private readonly RedisCacheAuthorizationService _cacheService;
 
-        public BasicAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory loggerFactory, UrlEncoder encoder, ISystemClock clock, IConfiguration configuration, ILogger<TaskController> logger)
+        #region
+        private long _idUser;
+        private string _hashedPassword;
+        private DateTime? _lockoutEnd;
+        private int _failedLoginAttempts;
+        #endregion
+
+        public BasicAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory loggerFactory, UrlEncoder encoder, ISystemClock clock,
+            IConfiguration configuration, ILogger<TaskController> logger, RedisCacheAuthorizationService cacheService)
             : base(options, loggerFactory, encoder, clock)
         {
             _configuration = configuration;
             _dbConnection = new SqlConnection(_configuration.GetConnectionString(HelperConnections.TASK_DB_CONNECTION));
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -71,24 +83,42 @@ namespace LogWorkService.Authorization
 
         private async Task<UserAuthentication> Authenticate(string username, string password)
         {
-            var user = await _dbConnection.QuerySingleOrDefaultAsync<UserAuthentication>("SELECT * FROM UserAuthentication WHERE Username = @Username", new { Username = username });
+            UserAuthentication user = null;
+            var userFromCache = _cacheService.GetUserCacheItem(username);
+            if (userFromCache != null && userFromCache.Value.PasswordHash == PasswordHasher.HashPassword(password, userFromCache.Value.Salt))
+            {
+                user = new UserAuthentication()
+                {
+                    PasswordHash = userFromCache.Value.PasswordHash,
+                    LockoutEnd = userFromCache.Value.LockoutEnd,
+                    FailedLoginAttempts = userFromCache.Value.FailedLoginAttempts,
+                    Id = userFromCache.Value.Id,
+                    UserName = username
+                };
+            }
+            else
+            {
+                user = await _dbConnection.QuerySingleOrDefaultAsync<UserAuthentication>("SELECT * FROM UserAuthentication WHERE Username = @Username", new { Username = username });
 
-            if (user == null)
-                return null;
+                if (user == null)
+                    return null;
+
+
+                var hashedPassword = PasswordHasher.HashPassword(password, user.Salt);
+                if (hashedPassword != user.PasswordHash)
+                {
+                    int failedLoginNumber = user.FailedLoginAttempts + 1;
+                    await SetFailedLoginAttempt(user.Id, failedLoginNumber, user.LockoutEnd);
+                    return null;
+                }
+
+                _cacheService.SetUserItem(user);
+            }
 
             if (user.LockoutEnd != null && user.LockoutEnd > DateTime.UtcNow)
             {
                 _logger.LogError($"User is lockout. Number of logged {user.FailedLoginAttempts} to time: {user.LockoutEnd}");
-                throw new TooManyRequestsException($"{username} blocked to {user.LockoutEnd}");
-            }
-
-            var hashedPassword = PasswordHasher.HashPassword(password, user.Salt);
-
-            if (hashedPassword != user.PasswordHash)
-            {
-                int failedLoginNumber = user.FailedLoginAttempts + 1;
-                await SetFailedLoginAttempt(user.Id, failedLoginNumber, user.LockoutEnd);
-                return null;
+                throw new TooManyRequestsException($"{user.FailedLoginAttempts} blocked to {user.LockoutEnd}");
             }
 
             if (user.FailedLoginAttempts > 0)
@@ -97,7 +127,7 @@ namespace LogWorkService.Authorization
             return user;
         }
 
-        private async Task SetFailedLoginAttempt(long idUserAuth, int number = 0, DateTime? lockoutEnd = null)
+        private async Task SetFailedLoginAttempt(UserAuthentication userAuth, int number = 0, DateTime? lockoutEnd = null)
         {
             lockoutEnd = number switch
             {
@@ -109,7 +139,7 @@ namespace LogWorkService.Authorization
 
             var parameters = new DynamicParameters();
             parameters.Add("FailedLoginAttempts", number);
-            parameters.Add("Id", idUserAuth);
+            parameters.Add("Id", userAuth.Id);
 
             if (lockoutEnd.HasValue)
                 parameters.Add("LockoutEnd", lockoutEnd.Value);
@@ -118,6 +148,9 @@ namespace LogWorkService.Authorization
 
             string updateSql = "UPDATE UserAuthentication SET FailedLoginAttempts = @FailedLoginAttempts, LockoutEnd = @LockoutEnd WHERE Id = @Id";
             await _dbConnection.ExecuteAsync(updateSql, parameters);
+
+            userAuth.LockoutEnd = 
+            _cacheService.SetUserItem(userAuth);
         }
     }
 }
