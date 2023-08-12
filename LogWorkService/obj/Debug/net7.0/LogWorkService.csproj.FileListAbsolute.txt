@@ -73,3 +73,4 @@ G:\OFI\repo\LogWorkApp\LogWorkService\obj\Debug\net7.0\LogWorkService.csproj.Cop
 G:\OFI\repo\LogWorkApp\LogWorkService\bin\Debug\net7.0\Newtonsoft.Json.dll
 G:\OFI\repo\LogWorkApp\LogWorkService\bin\Debug\net7.0\Pipelines.Sockets.Unofficial.dll
 G:\OFI\repo\LogWorkApp\LogWorkService\bin\Debug\net7.0\StackExchange.Redis.dll
+G:\OFI\repo\LogWorkApp\LogWorkService\bin\Debug\net7.0\AspNetCoreRateLimit.dll
