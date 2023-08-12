@@ -1,4 +1,5 @@
 using LogWorkService.Authorization;
+using LogWorkService.Authorization.Cache;
 using LogWorkService.Services;
 using Microsoft.AspNetCore.Authentication;
 using Serilog;
@@ -21,13 +22,16 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 builder.Services.AddScoped<TaskService>();
 
-#endregion
+builder.Services.AddScoped<RedisCacheAuthorizationService>();
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(builder.Configuration.GetSection("Redis:Configuration").Value));
 
 builder.Services.AddControllers();
 
 builder.Services.AddAuthentication("BasicAuthentication")
     .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+#endregion
 
 var app = builder.Build();
 
