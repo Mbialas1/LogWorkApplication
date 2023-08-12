@@ -40,29 +40,29 @@ namespace LogWorkService.Authorization
             if (!Request.Headers.ContainsKey("Authorization"))
                 return AuthenticateResult.Fail("Missing Authorization Header");
 
-            //UserAuthentication userAuthentication = null;
-            //try
-            //{
-            //    var authHeader = AuthenticationHeaderValue.Parse(Request.Headers["Authorization"]);
-            //    var credentialBytes = Convert.FromBase64String(authHeader.Parameter);
-            //    var credentials = Encoding.UTF8.GetString(credentialBytes).Split(':');
-            //    var username = credentials[0];
-            //    var password = credentials[1];
+            UserAuthentication userAuthentication = null;
+            try
+            {
+                var authHeader = AuthenticationHeaderValue.Parse(Request.Headers["Authorization"]);
+                var credentialBytes = Convert.FromBase64String(authHeader.Parameter);
+                var credentials = Encoding.UTF8.GetString(credentialBytes).Split(':');
+                var username = credentials[0];
+                var password = credentials[1];
 
-            //    userAuthentication = await Authenticate(username, password);
-            //}
-            //catch (TooManyRequestsException tooManyEx)
-            //{
-            //    return AuthenticateResult.Fail(tooManyEx);
-            //}
-            //catch (Exception ex)
-            //{
-            //    _logger.LogError(ex + "Invalid Authorization Header");
-            //    return AuthenticateResult.Fail("Invalid Authorization Header");
-            //}
+                userAuthentication = await Authenticate(username, password);
+            }
+            catch (TooManyRequestsException tooManyEx)
+            {
+                return AuthenticateResult.Fail(tooManyEx);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex + "Invalid Authorization Header");
+                return AuthenticateResult.Fail("Invalid Authorization Header");
+            }
 
-            //if (userAuthentication == null)
-            //    return AuthenticateResult.Fail("Invalid Username or Password");
+            if (userAuthentication == null)
+                return AuthenticateResult.Fail("Invalid Username or Password");
 
             var claims = new[] {
             new Claim(ClaimTypes.NameIdentifier, string.Empty)};
