@@ -32,7 +32,7 @@ namespace LogWorkService.Authorization.Cache
 
             var serializedData = JsonConvert.SerializeObject(userCacheItem);
 
-            _database.StringSet($"{_instanceName}:usercacheitem:{userCacheItem}", serializedData ,expiry);
+            _database.StringSet($"{_instanceName}:userauthdata:{userAuthentication.UserName}", serializedData, expiry);
         }
 
         public UserCacheItem? GetUserCacheItem(string username)

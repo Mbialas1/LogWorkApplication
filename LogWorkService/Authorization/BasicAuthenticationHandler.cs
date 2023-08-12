@@ -25,13 +25,6 @@ namespace LogWorkService.Authorization
         private readonly ILogger<TaskController> _logger;
         private readonly RedisCacheAuthorizationService _cacheService;
 
-        #region
-        private long _idUser;
-        private string _hashedPassword;
-        private DateTime? _lockoutEnd;
-        private int _failedLoginAttempts;
-        #endregion
-
         public BasicAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory loggerFactory, UrlEncoder encoder, ISystemClock clock,
             IConfiguration configuration, ILogger<TaskController> logger, RedisCacheAuthorizationService cacheService)
             : base(options, loggerFactory, encoder, clock)
@@ -72,7 +65,7 @@ namespace LogWorkService.Authorization
                 return AuthenticateResult.Fail("Invalid Username or Password");
 
             var claims = new[] {
-            new Claim(ClaimTypes.NameIdentifier, userAuthentication.UserName)};
+            new Claim(ClaimTypes.NameIdentifier, string.Empty)};
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
@@ -81,13 +74,15 @@ namespace LogWorkService.Authorization
             return AuthenticateResult.Success(ticket);
         }
 
-        private async Task<UserAuthentication> Authenticate(string username, string password)
+        private async Task<UserAuthentication> CheckAuthenticateFromCache(string username, string password)
         {
-            UserAuthentication user = null;
+            _logger.LogInformation("Checking in user auth in cache");
             var userFromCache = _cacheService.GetUserCacheItem(username);
-            if (userFromCache != null && userFromCache.Value.PasswordHash == PasswordHasher.HashPassword(password, userFromCache.Value.Salt))
+            if (userFromCache != null)
             {
-                user = new UserAuthentication()
+                await CheckLockEnd(userFromCache.Value.LockoutEnd); //If user is blocked dont check password and return exception
+
+                var user = new UserAuthentication()
                 {
                     PasswordHash = userFromCache.Value.PasswordHash,
                     LockoutEnd = userFromCache.Value.LockoutEnd,
@@ -95,41 +90,63 @@ namespace LogWorkService.Authorization
                     Id = userFromCache.Value.Id,
                     UserName = username
                 };
+
+                if (user.PasswordHash == PasswordHasher.HashPassword(password, user.Salt))
+                    return user;
+                else
+                {
+                    user.FailedLoginAttempts += 1;
+                    await SetFailedLoginAttempt(user);
+                    _logger.LogError("Password incorect");
+                    throw new TooManyRequestsException("Password inncorect");
+                }
             }
-            else
+
+            return null;
+        }
+
+        private async Task<UserAuthentication> Authenticate(string username, string password)
+        {
+            UserAuthentication user = await CheckAuthenticateFromCache(username, password);
+
+            if (user is null)
             {
+                _logger.LogInformation("Checking user in data base");
                 user = await _dbConnection.QuerySingleOrDefaultAsync<UserAuthentication>("SELECT * FROM UserAuthentication WHERE Username = @Username", new { Username = username });
 
                 if (user == null)
                     return null;
 
+                await CheckLockEnd(user.LockoutEnd);
 
                 var hashedPassword = PasswordHasher.HashPassword(password, user.Salt);
                 if (hashedPassword != user.PasswordHash)
                 {
-                    int failedLoginNumber = user.FailedLoginAttempts + 1;
-                    await SetFailedLoginAttempt(user.Id, failedLoginNumber, user.LockoutEnd);
+                    user.FailedLoginAttempts = +1;
+                    await SetFailedLoginAttempt(user);
                     return null;
                 }
 
+                _logger.LogInformation("Set user auth to cache");
                 _cacheService.SetUserItem(user);
             }
-
-            if (user.LockoutEnd != null && user.LockoutEnd > DateTime.UtcNow)
-            {
-                _logger.LogError($"User is lockout. Number of logged {user.FailedLoginAttempts} to time: {user.LockoutEnd}");
-                throw new TooManyRequestsException($"{user.FailedLoginAttempts} blocked to {user.LockoutEnd}");
-            }
-
-            if (user.FailedLoginAttempts > 0)
-                await SetFailedLoginAttempt(user.Id);
 
             return user;
         }
 
-        private async Task SetFailedLoginAttempt(UserAuthentication userAuth, int number = 0, DateTime? lockoutEnd = null)
+        private async Task CheckLockEnd(DateTime? lockoutEnd)
         {
-            lockoutEnd = number switch
+            if (lockoutEnd.HasValue && lockoutEnd > DateTime.UtcNow)
+            {
+                _logger.LogError($"User is lockout to time: {lockoutEnd}");
+                throw new TooManyRequestsException($"blocked to {lockoutEnd}");
+            }
+        }
+
+        private async Task SetFailedLoginAttempt(UserAuthentication userAuth)
+        {
+            DateTime? lockoutEnd = null;
+            lockoutEnd = userAuth.FailedLoginAttempts switch
             {
                 5 => DateTime.UtcNow.AddMinutes(1),
                 10 => DateTime.UtcNow.AddMinutes(15),
@@ -138,18 +155,18 @@ namespace LogWorkService.Authorization
             };
 
             var parameters = new DynamicParameters();
-            parameters.Add("FailedLoginAttempts", number);
+            parameters.Add("FailedLoginAttempts", userAuth.FailedLoginAttempts);
             parameters.Add("Id", userAuth.Id);
 
             if (lockoutEnd.HasValue)
-                parameters.Add("LockoutEnd", lockoutEnd.Value);
+                parameters.Add("LockoutEnd", lockoutEnd);
             else
                 parameters.Add("LockoutEnd", dbType: DbType.DateTime, value: null, direction: ParameterDirection.Input);
 
             string updateSql = "UPDATE UserAuthentication SET FailedLoginAttempts = @FailedLoginAttempts, LockoutEnd = @LockoutEnd WHERE Id = @Id";
             await _dbConnection.ExecuteAsync(updateSql, parameters);
 
-            userAuth.LockoutEnd = 
+            userAuth.LockoutEnd = lockoutEnd;
             _cacheService.SetUserItem(userAuth);
         }
     }
