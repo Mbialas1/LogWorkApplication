@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Serilog;
 using StackExchange.Redis;
 using AspNetCoreRateLimit;
+using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,14 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Services(services)
     .Enrich.FromLogContext()
     .WriteTo.Console());
+
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.Providers.Add<GzipCompressionProvider>();
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.EnableForHttps = true;
+});
 
 // Add services to the container.
 
@@ -43,6 +52,8 @@ builder.Services.AddInMemoryRateLimiting();
 #endregion
 
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 app.UseSerilogRequestLogging();
 
